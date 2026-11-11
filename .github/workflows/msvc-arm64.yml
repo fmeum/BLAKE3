@@ -1,0 +1,43 @@
+name: msvc-arm64
+
+on:
+  push:
+    branches:
+      - msvc-arm64-check
+  workflow_dispatch:
+
+env:
+  BLAKE3_CI: "1"
+  RUSTFLAGS: "-D warnings"
+
+jobs:
+  msvc-arm64:
+    runs-on: windows-11-arm
+    steps:
+    - uses: actions/checkout@v4
+    - uses: dtolnay/rust-toolchain@stable
+    - name: print compiler version
+      run: cargo run --quiet
+      working-directory: ./tools/compiler_version
+    - run: cargo test --features=rayon,traits-preview,serde,zeroize
+    - run: cargo test --no-default-features
+    - name: C bindings with NEON
+      run: cargo test --features=neon
+      working-directory: ./c/blake3_c_rust_bindings
+    - name: C bindings without features
+      run: cargo test
+      working-directory: ./c/blake3_c_rust_bindings
+    - name: CMake build with MSVC
+      shell: bash
+      run: |
+        cmake -S c -B c/build -A ARM64 -DBLAKE3_EXAMPLES=ON
+        cmake --build c/build --config Release --verbose
+    - name: Hash a test vector with the CMake build
+      shell: bash
+      run: |
+        python -c "import sys; sys.stdout.buffer.write(bytes(i % 251 for i in range(102400)))" > input.bin
+        actual=$(find c/build -name 'example.exe' | head -1 | xargs -I{} sh -c '"{}" < input.bin' | tr -d '\r')
+        echo "actual:   $actual"
+        expected=bc3e3d41a1146b069abffad3c0d44860cf664390afce4d9661f7902e7943e085
+        echo "expected: $expected"
+        test "$actual" = "$expected"
