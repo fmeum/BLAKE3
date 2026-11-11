@@ -317,8 +317,8 @@ static void blake3_hash4_neon(const uint8_t *const *inputs, size_t blocks,
 
 // hash8 hashes two groups of four inputs at once, interleaving their
 // instructions. This keeps more NEON pipelines busy than hash4 does, but needs
-// more registers than the 16 vector registers that 32-bit ARM has.
-#if defined(IS_AARCH64)
+// more than 16 vector registers. See MAX_SIMD_DEGREE.
+#if MAX_SIMD_DEGREE >= 8
 
 INLINE uint32x4x2_t add_128x2(uint32x4x2_t a, uint32x4x2_t b) {
   uint32x4x2_t r = {{add_128(a.val[0], b.val[0]), add_128(a.val[1], b.val[1])}};
@@ -548,7 +548,7 @@ static void blake3_hash8_neon(const uint8_t *const *inputs, size_t blocks,
   store_cvs4(hi, &out[4 * BLAKE3_OUT_LEN]);
 }
 
-#endif // IS_AARCH64
+#endif // MAX_SIMD_DEGREE >= 8
 
 /*
  * ----------------------------------------------------------------------------
@@ -589,7 +589,7 @@ void blake3_hash_many_neon(const uint8_t *const *inputs, size_t num_inputs,
                            uint64_t counter, bool increment_counter,
                            uint8_t flags, uint8_t flags_start,
                            uint8_t flags_end, uint8_t *out) {
-#if defined(IS_AARCH64)
+#if MAX_SIMD_DEGREE >= 8
   while (num_inputs >= 8) {
     blake3_hash8_neon(inputs, blocks, key, counter, increment_counter, flags,
                       flags_start, flags_end, out);
