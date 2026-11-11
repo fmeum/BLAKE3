@@ -73,6 +73,8 @@ enum blake3_flags {
 
 #if defined(IS_X86)
 #define MAX_SIMD_DEGREE 16
+#elif BLAKE3_USE_NEON == 1 && defined(IS_AARCH64)
+#define MAX_SIMD_DEGREE 8
 #elif BLAKE3_USE_NEON == 1
 #define MAX_SIMD_DEGREE 4
 #else
